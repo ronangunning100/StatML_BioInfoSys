@@ -15,5 +15,5 @@ statistical (machine) learning techniques that are suitable for the emerging pro
 these application areas, but also applicable in general. The students will gain a
 comprehensive knowledge in both supervised and unsupervised learning.
 
-Further informatoin can be found in the syllabus which can be accessed via the URL below.
+Further information can be found in the syllabus which can be accessed via the URL below.
 https://www.ee.columbia.edu/sites/default/files/content/docs/EECS%20E6690_Fall2023_description_and_syllabus.pdf
