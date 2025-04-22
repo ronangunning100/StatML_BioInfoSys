@@ -1,7 +1,11 @@
 # EECSE6690
 Statistical Machine Learning for Biological and Information Systems
 
-This repo contains my work from the aforementioned course. A description of the course can be seen below taken from the syllabus.
+This repo contains my work from the aforementioned course.
+In particular, it contains the final project of this course in which I and a project partner replicate, refine, and improve ML models for predicting human behavior from smartphone intertial sensor data.
+
+A description of the course can be seen below taken from the syllabus.
+
 
 Ongoing advancements in information systems as well as the
 emerging revolution in microbiology and medicine are creating a deluge of data, whose
