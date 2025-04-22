@@ -1,0 +1,541 @@
+---
+title: "rm4064"
+author: "Ronan McNally"
+date: "2024-10-05"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+
+
+Problem 2
+```{r}
+
+# P2 PART A
+
+lambda.p2 <- 0.25
+y1.p2 <- 25
+Beta.p2 <- seq(-100, 100, by=.01)
+plot(Beta.p2,((1+lambda.p2)*Beta.p2^2)-(2*y1.p2*Beta.p2)+(y1.p2^2), pch=20, col="grey", xlab = "Beta Values", ylab = "Eq(1) output", main = "Q2a(Ridge): Output of Eq1 vs Betas")
+
+print("Question 2 PART A:")
+print("Corresponding Beta value for minimum of ridge regression function (1)")
+Beta.p2[which.min(((1+lambda.p2)*Beta.p2^2)-(2*y1.p2*Beta.p2)+(y1.p2^2))]
+Bmin.exp1 <- Beta.p2[which.min(((1+lambda.p2)*Beta.p2^2)-(2*y1.p2*Beta.p2)+(y1.p2^2))]
+
+print("Beta value calculated through (3)")
+y1.p2/(1+lambda.p2)
+Bmin.exp3 <- y1.p2/(1+lambda.p2)
+
+print("Are the two equal?")
+setequal(Bmin.exp1, Bmin.exp3)
+
+abline(v=y1.p2/(1+lambda.p2), col="red")
+points(Bmin.exp1, ((1+lambda.p2)*Bmin.exp1^2)-(2*y1.p2*Bmin.exp1)+(y1.p2^2), col="blue", pch=19)
+
+legend("bottomleft", inset=.05,c("Output from (1)","Minimizing Beta from (3)","Minimizing Beta from (1)"), lwd=2, lty=c(1, 1, 1), col=c("grey","red","blue"), box.lty=0)
+
+
+
+
+# P2 PART B
+print("Question 2 PART A:")
+
+lambda.p2b <- 10
+
+y1.p2b.op1 <- 20
+y1.p2b.op2 <- -20
+y1.p2b.op3 <- 1
+
+
+# OPTION 1: y>lambda/2
+Beta.p2 <- seq(-100, 100, by=.01)
+
+plot(Beta.p2,Beta.p2^2 - 2*y1.p2b.op1*Beta.p2 + y1.p2b.op1^2 + lambda.p2b*abs(Beta.p2), pch=20, col="cornsilk2", xlab = "Beta Values", ylab = "Eq(2) output", main = "Q2b(Lasso, y>lam/2): Output of Eq2 vs Betas")
+
+
+print("Corresponding Beta value for minimum of lasso regression function (2) when y>lam/2")
+Beta.p2[which.min(Beta.p2^2 - 2*y1.p2b.op1*Beta.p2 + y1.p2b.op1^2 + lambda.p2b*abs(Beta.p2))]
+Bmin.exp2.p2.op1 <- Beta.p2[which.min(Beta.p2^2 - 2*y1.p2b.op1*Beta.p2 + y1.p2b.op1^2 + lambda.p2b*abs(Beta.p2))]
+
+print("Beta value calculated through (4), y>lam/2")
+y1.p2b.op1 - (lambda.p2b/2)
+Bmin.exp4.p2.op1 <- y1.p2b.op1-(lambda.p2b/2)
+
+print("Are the two equal?")
+setequal(Bmin.exp2.p2.op1, Bmin.exp4.p2.op1)
+
+abline(v=Bmin.exp4.p2.op1, col="red")
+points(Bmin.exp2.p2.op1, Bmin.exp2.p2.op1^2 - 2*y1.p2b.op1*Bmin.exp2.p2.op1 + y1.p2b.op1^2 + lambda.p2b*abs(Bmin.exp2.p2.op1), col="blue", pch=19)
+
+legend("left", inset=.05,c("Output from (2)","Minimizing Beta from (2)","Minimizing Beta from (4)"), lwd=2, lty=c(1, 1, 1), col=c("cornsilk2","red","blue"), box.lty=0)
+
+
+
+
+
+# OPTION 2: y<lambda/2
+
+plot(Beta.p2,Beta.p2^2 - 2*y1.p2b.op2*Beta.p2 + y1.p2b.op2^2 + lambda.p2b*abs(Beta.p2), pch=20, col="cornsilk3", xlab = "Beta Values", ylab = "Eq(2) output", main = "Q2b(Lasso, y<lam/2: Output of Eq2 vs Betas")
+
+
+print("Corresponding Beta value for minimum of lasso regression function (2) when y<lam/2")
+Beta.p2[which.min(Beta.p2^2 - 2*y1.p2b.op2*Beta.p2 + y1.p2b.op2^2 + lambda.p2b*abs(Beta.p2))]
+Bmin.exp2.p2.op2 <- Beta.p2[which.min(Beta.p2^2 - 2*y1.p2b.op2*Beta.p2 + y1.p2b.op2^2 + lambda.p2b*abs(Beta.p2))]
+
+print("Beta value calculated through (4), y<lam/2")
+y1.p2b.op2 + (lambda.p2b/2)
+Bmin.exp4.p2.op2 <- y1.p2b.op2+(lambda.p2b/2)
+
+print("Are the two equal?")
+setequal(Bmin.exp2.p2.op2, Bmin.exp4.p2.op2)
+
+abline(v=Bmin.exp4.p2.op2, col="red")
+points(Bmin.exp2.p2.op2, Bmin.exp2.p2.op2^2 - 2*y1.p2b.op2*Bmin.exp2.p2.op2 + y1.p2b.op2^2 + lambda.p2b*abs(Bmin.exp2.p2.op2), col="blue", pch=19)
+
+legend("topleft", inset=.05,c("Output from (2)","Minimizing Beta from (2)","Minimizing Beta from (4)"), lwd=2, lty=c(1, 1, 1), col=c("cornsilk3","red","blue"), box.lty=0)
+
+
+
+
+
+# OPTION 3: |y|(<or=)lambda/2
+
+plot(Beta.p2,Beta.p2^2 - 2*y1.p2b.op3*Beta.p2 + y1.p2b.op3^2 + lambda.p2b*abs(Beta.p2), pch=20, col="cornsilk4", xlab = "Beta Values", ylab = "Eq(2) output", main = "Q2b(Lasso, |y|(<or=)lam/2: Output of Eq2 vs Betas")
+
+
+print("Corresponding Beta value for minimum of lasso regression function (2) when |y|(<or=)lam/2")
+Beta.p2[which.min(Beta.p2^2 - 2*y1.p2b.op3*Beta.p2 + y1.p2b.op3^2 + lambda.p2b*abs(Beta.p2))]
+Bmin.exp2.p2.op3 <- Beta.p2[which.min(Beta.p2^2 - 2*y1.p2b.op3*Beta.p2 + y1.p2b.op3^2 + lambda.p2b*abs(Beta.p2))]
+
+print("Beta value calculated through (4), |y|(<or=)lam/2")
+0
+Bmin.exp4.p2.op3 <- 0
+
+print("Are the two equal?")
+setequal(Bmin.exp2.p2.op3, Bmin.exp4.p2.op3)
+
+abline(v=Bmin.exp4.p2.op3, col="red")
+points(Bmin.exp2.p2.op3, Bmin.exp2.p2.op3^2 - 2*y1.p2b.op3*Bmin.exp2.p2.op3 + y1.p2b.op3^2 + lambda.p2b*abs(Bmin.exp2.p2.op3), col="blue", pch=19)
+
+legend("topleft", inset=.05,c("Output from (2)","Minimizing Beta from (2)","Minimizing Beta from (4)"), lwd=2, lty=c(1, 1, 1), col=c("cornsilk4","red","blue"), box.lty=0)
+
+```
+
+
+
+
+Problem 4
+```{r}
+# P4 PART A
+
+set.seed(1)
+
+# length of vectors
+n <- 100
+
+# Generate predictor X of length n=100 as well as a noise vector eps of length n=100
+
+X <- rnorm(n, mean = 0, sd = 1)
+
+eps <- rnorm(n, mean = 0, sd = 1)
+
+
+# P4 PART B: Generate a response vector Y of length n=100 according to the model shown in HW2 doc, where B0, B1, B2, and B3 are constant of your choice.
+
+B0 <- 1
+B1 <- 2
+B2 <- 3
+B3 <- 4
+
+Y <- B0 + B1*X + B2*(X^2) + B3*(X^3) + eps
+
+
+# P4 PART C: Use 
+#install.package("leaps")
+library(leaps)
+library(ggplot2)
+
+X1 <- X^1
+X2 <- X^2
+X3 <- X^3
+X4 <- X^4
+X5 <- X^5
+X6 <- X^6
+X7 <- X^7
+X8 <- X^8
+X9 <- X^9
+X10 <- X^10
+
+writeLines("-----------------------------------------------------------------------------")
+writeLines("\n BEST SUBSET SELECTION \n")
+
+data <- data.frame(X, Y)
+#data <- data.frame(Y, X1, X2, X3, X4, X5, X6, X7, X8, X9, X10)
+
+subset_fits <- regsubsets(Y ~ X + X2 + X3 + X4 + X5 + X6 + X7 + X8 + X9 + X10, data = data, nvmax=10)
+#subset_fits <- regsubsets(Y ~ poly(X, 10, raw = TRUE), data = data, nvmax=10)
+
+
+regfits_summary <- summary(subset_fits)
+
+writeLines("Best Selection Coefficients (Cp, BIC, R2 respectively):")
+coef(subset_fits, which.min(regfits_summary$cp))
+writeLines("\n")
+coef(subset_fits, which.min(regfits_summary$bic))
+writeLines("\n")
+coef(subset_fits, which.max(regfits_summary$adjr2))
+writeLines("\n")
+
+regfits_summary$cp
+writeLines(paste("Lowest Cp model number: ", which.min(regfits_summary$cp)))
+plot(regfits_summary$cp, xlab = "Number of Variables", ylab = "Cp", main = "Best subset: Cp vs Number of Variables", type = "b")
+points(which.min(regfits_summary$cp), regfits_summary$cp[which.min(regfits_summary$cp)], col="darkgreen", cex = 2, pch = 20)
+
+regfits_summary$bic
+writeLines(paste("Lowest BIC model: ", which.min(regfits_summary$bic)))
+plot(regfits_summary$bic, xlab = "Number of Variables", ylab = "BIC", main = "Best subset: BIC vs Number of Variables", type = "b")
+points(which.min(regfits_summary$bic), regfits_summary$bic[which.min(regfits_summary$bic)], col="darkgreen", cex = 2, pch = 20)
+
+regfits_summary$adjr2
+writeLines(paste("Greatest R-squared model number: ", which.max(regfits_summary$adjr2)))
+plot(regfits_summary$adjr2, xlab = "Number of Variables", ylab = "R-squared", main = "Best subset: R-squared vs Number of Variables", type = "b")
+points(which.max(regfits_summary$adjr2), regfits_summary$adjr2[which.max(regfits_summary$adjr2)], col="darkgreen", cex = 2, pch = 20)
+
+
+# P4 PART D: 
+
+
+# forward selection
+writeLines("-----------------------------------------------------------------------------")
+writeLines("\n FORWARD SELECTION \n")
+#regfit.fwd <- regsubsets(Y ~ poly(X, 10, raw = TRUE), data = data, nvmax = 10, method = "forward")
+regfit.fwd <- regsubsets(Y ~ X + X2 + X3 + X4 + X5 + X6 + X7 + X8 + X9 + X10, data = data, nvmax = 10, method = "forward")
+regfits_summary.fwd <- summary(regfit.fwd)
+
+writeLines("Fwd Selection Coefficients (Cp, BIC, R2 respectively):")
+coef(regfit.fwd, which.min(regfits_summary.fwd$cp))
+writeLines("\n")
+coef(regfit.fwd, which.min(regfits_summary.fwd$bic))
+writeLines("\n")
+coef(regfit.fwd, which.max(regfits_summary.fwd$adjr2))
+writeLines("\n")
+
+
+regfits_summary.fwd$cp
+writeLines(paste("Fwd Select Lowest Cp model number: ", which.min(regfits_summary.fwd$cp)))
+plot(regfits_summary.fwd$cp, xlab = "Number of Variables", ylab = "Cp", main = "Fwd Select Best subset: Cp vs Number of Variables", type = "b")
+points(which.min(regfits_summary.fwd$cp), regfits_summary.fwd$cp[which.min(regfits_summary.fwd$cp)], col="darkred", cex = 2, pch = 20)
+
+regfits_summary.fwd$bic
+writeLines(paste("Fwd Select Lowest BIC model: ", which.min(regfits_summary.fwd$bic)))
+plot(regfits_summary.fwd$bic, xlab = "Number of Variables", ylab = "BIC", main = "Fwd Select Best subset: BIC vs Number of Variables", type = "b")
+points(which.min(regfits_summary.fwd$bic), regfits_summary.fwd$bic[which.min(regfits_summary.fwd$bic)], col="darkred", cex = 2, pch = 20)
+
+regfits_summary.fwd$adjr2
+writeLines(paste("Fwd Select Greatest R-squared model number: ", which.max(regfits_summary.fwd$adjr2)))
+plot(regfits_summary.fwd$adjr2, xlab = "Number of Variables", ylab = "R-squared", main = "Fwd Select Best subset: R-squared vs Number of Variables", type = "b")
+points(which.max(regfits_summary.fwd$adjr2), regfits_summary.fwd$adjr2[which.max(regfits_summary.fwd$adjr2)], col="darkred", cex = 2, pch = 20)
+
+
+# backward selection
+writeLines("-----------------------------------------------------------------------------")
+writeLines("\n BACKWARD SELECTION \n")
+
+#regfit.bwd <- regsubsets(Y ~ poly(X, 10, raw = TRUE), data = data, nvmax = 10, method = "backward")
+regfit.bwd <- regsubsets(Y ~ X + X2 + X3 + X4 + X5 + X6 + X7 + X8 + X9 + X10, data = data, nvmax = 10, method = "backward")
+regfits_summary.bwd <- summary(regfit.bwd)
+
+writeLines("Bwd Selection Coefficients (Cp, BIC, R2 respectively):")
+coef(regfit.bwd, which.min(regfits_summary.bwd$cp))
+writeLines("\n")
+coef(regfit.bwd, which.min(regfits_summary.bwd$bic))
+writeLines("\n")
+coef(regfit.bwd, which.max(regfits_summary.bwd$adjr2))
+writeLines("\n")
+
+regfits_summary.bwd$cp
+writeLines(paste("Bwd Select Lowest Cp model number: ", which.min(regfits_summary.bwd$cp)))
+plot(regfits_summary.bwd$cp, xlab = "Number of Variables", ylab = "Cp", main = "Bwd Select Best subset: Cp vs Number of Variables", type = "b")
+points(which.min(regfits_summary.bwd$cp), regfits_summary.bwd$cp[which.min(regfits_summary.bwd$cp)], col="darkblue", cex = 2, pch = 20)
+
+regfits_summary.bwd$bic
+writeLines(paste("Bwd Select Lowest BIC model: ", which.min(regfits_summary.bwd$bic)))
+plot(regfits_summary.bwd$bic, xlab = "Number of Variables", ylab = "BIC", main = "Bwd Select Best subset: BIC vs Number of Variables", type = "b")
+points(which.min(regfits_summary.bwd$bic), regfits_summary.bwd$bic[which.min(regfits_summary.bwd$bic)], col="darkblue", cex = 2, pch = 20)
+
+regfits_summary.bwd$adjr2
+writeLines(paste("Bwd Select Greatest R-squared model number: ", which.max(regfits_summary.bwd$adjr2)))
+plot(regfits_summary.bwd$adjr2, xlab = "Number of Variables", ylab = "R-squared", main = "Bwd Select Best subset: R-squared vs Number of Variables", type = "b")
+points(which.max(regfits_summary.bwd$adjr2), regfits_summary.bwd$adjr2[which.max(regfits_summary.bwd$adjr2)], col="darkblue", cex = 2, pch = 20)
+
+
+
+# P4 PART E: LASSO and Cross Validation
+
+# first must create x-matrix and y-vector
+library(glmnet)
+
+set.seed(1)
+
+X_mat = model.matrix(Y ~ X + X2 + X3 + X4 + X5 + X6 + X7 + X8 + X9 + X10, data, nvmax = 10) [,-1]
+Y_vec = data$Y
+
+
+sample <- sample(c(TRUE, FALSE), nrow(X_mat), replace=TRUE, prob=c(0.7,0.3))
+train <- X_mat[sample,]
+test <- X_mat[!sample,]
+grid <- 10^seq(10,-2, length = 100)
+lasso.regfit <-glmnet(X_mat, Y_vec, alpha = 1, lambda = grid)
+plot(lasso.regfit)
+
+cv.out <-cv.glmnet(X_mat, Y_vec, alpha = 1)
+plot(cv.out)
+bestlam <- cv.out$lambda.min
+lasso.pred <-predict(lasso.regfit, s = bestlam, newx = train)
+dev.off
+
+bestmodel <- glmnet(X_mat, Y_vec, alpha = 1)
+predict(bestmodel, s = bestlam, type = "coefficients")
+
+
+# P4 PART F
+B7 <- 4.5
+
+Y_4f <- B0 + B7*X7 + eps
+
+data_4f <- data.frame(Y_4f, X)
+model_4f <- regsubsets(Y_4f ~ X + X2 + X3 + X4 + X5 + X6 + X7 + X8 + X9 + X10, data = data_4f, nvmax = 10)
+model_4f_sum <- summary(model_4f)
+
+print("Results from Best Subset Selection")
+
+print("Minimum Cp, 4f")
+which.min(model_4f_sum$cp)
+
+print("Minimum BIC, 4f")
+which.min(model_4f_sum$bic)
+
+print("Maximum R^2, 4f")
+which.max(model_4f_sum$adjr2)
+
+print("Coefs of Model with 2 variables")
+coefficients(model_4f, id=2)
+
+print("Coefs of Model with 1 variables")
+coefficients(model_4f, id=1)
+
+print("Coefs of Model with 4 variables")
+coefficients(model_4f, id=4)
+
+
+print("Results from Lasso Regression")
+
+cv.out.4f <-cv.glmnet(X_mat, Y_vec, alpha = 1)
+bestlam.4f <- cv.out$lambda.min
+bestmodel.4f <- glmnet(X_mat, Y_4f, alpha = 1)
+predict(bestmodel.4f, s = bestlam.4f, type = "coefficients")
+
+
+
+```
+
+
+
+
+QUESTION 5 (uses 'college' dataset)
+```{r}
+# P5 PART A: Split the data into a training and a test set
+
+library(ISLR2)
+data(College)
+
+
+sample5 <- sample(c(TRUE, FALSE), nrow(College), replace=TRUE, prob=c(0.7,0.3))
+train5 <- College[sample5, ]
+test5 <- College[!sample5, ]
+
+
+
+# P5 PART B: fit a linear model on the training set using the least squares method (using lm() command) and report the test error obtained
+
+lm.q5 <- lm(train5$Apps ~ ., train5) # trains linear regression model on training data (Enroll ~ all other variables)
+
+predictions.q5b <- predict(lm.q5, test5[,-2]) # makes predictions on test data for 'yhat', test5[,-4] removes response variable from test data
+
+residuals.q5b <- test5$Apps - predictions.q5b # take residuals (actual - predicted)
+
+MSE.lm.q5b <- mean(residuals.q5b^2) # find residual mean square error (large? possibly due to qualitative ")
+
+print("MSE from least squares method:")
+MSE.lm.q5b
+
+
+# P5 PART C
+
+train_xmat_q5 <- model.matrix(train5$Apps ~ ., train5) [,-1]
+train_yvec_q5 <- train5$Apps
+
+test_xmat_q5 <- model.matrix(test5$Apps ~ ., test5) [,-1]
+test_yvec_q5 <- test5$Apps
+
+cv.out.q5c <- cv.glmnet(train_xmat_q5, train_yvec_q5, alpha = 0)
+lambda_best_q5c <- cv.out.q5c$lambda.min
+
+ridge.mod.q5c <- glmnet(train_xmat_q5, train_yvec_q5, alpha = 0, lambda = lambda_best_q5c)
+
+predictions.q5c <- predict(ridge.mod.q5c, s=lambda_best_q5c, newx = test_xmat_q5)
+
+residuals.q5c <- test_yvec_q5 - predictions.q5c
+
+MSE.glm.q5c <- mean(residuals.q5c^2)
+
+print("MSE from ridge method:")
+MSE.glm.q5c
+
+
+
+# P5 PART D
+
+cv.out.q5d <- cv.glmnet(train_xmat_q5, train_yvec_q5, alpha = 1)
+lambda_best_q5d <- cv.out.q5d$lambda.min
+
+lasso.mod.q5d <- glmnet(train_xmat_q5, train_yvec_q5, alpha = 1, lambda = lambda_best_q5d)
+
+predictions.q5d <- predict(lasso.mod.q5d, s=lambda_best_q5d, newx = test_xmat_q5)
+
+residuals.q5d <- test_yvec_q5 - predictions.q5d
+
+MSE.glm.q5d <- mean(residuals.q5d^2)
+print("MSE from lasso method:")
+MSE.glm.q5d
+
+
+# number of non-zero rows for lasso regression (note: always finding the coefficients using the training on the full dataset)
+
+full_xmat_q5 <- model.matrix(College$Apps ~ ., College) [,-1]
+full_yvec_q5 <- College$Apps
+
+cv.out.q5dcoeffs <- cv.glmnet(full_xmat_q5, full_yvec_q5, alpha = 1)
+lambda_best_q5dcoeffs <- cv.out.q5dcoeffs$lambda.min
+
+lasso.mod.q5dcoeffs <- glmnet(full_xmat_q5, full_yvec_q5, alpha = 1, lambda = lambda_best_q5dcoeffs)
+
+print("Number of non-zero coefficients:")
+colSums(lasso.mod.q5dcoeffs$beta !=0)
+```
+
+
+Problem 6
+
+```{r}
+
+# P6 PART A
+
+set.seed(1)
+library(leaps)
+
+n <- 1000
+p <- 20
+
+X <- matrix(rnorm(n*p),nrow=n,ncol=p)
+X[,1] = rnorm(n, mean = 0, sd = .25)
+
+B <- rnorm(p)
+
+B[6] <- 0
+B[7] <- 0
+B[15] <- 0
+
+eps <- rnorm(n)
+
+Y <- X%*%B + eps
+
+
+# P6 PART B
+
+
+sample <- sample(1:n, size = 100, replace = FALSE)
+X_train_p6b <- X[sample, ]
+X_test_p6b <- X[-sample, ]
+
+Y_train_p6b <- Y[sample]
+Y_test_p6b <- Y[-sample]
+
+
+
+# P6 PART C
+
+df.p6c.train <- data.frame(X_train_p6b,Y_train_p6b)
+
+regfit <- regsubsets(Y_train_p6b ~ ., data = df.p6c.train, nvmax = p)
+
+train.mat <- model.matrix(Y_train_p6b ~ ., data = df.p6c.train)
+
+val.errors.train <- rep(NA, p)
+
+for (i in 1:p) {
+  coefi <- coef(regfit, id = i)
+  pred <- train.mat[, names(coefi)] %*% coefi
+  val.errors.train[i] <- mean((Y_train_p6b - pred)^2)
+}
+plot(1:p, val.errors.train, xlab="Best Model of Each Size", ylab="Training Set MSE", main="Training Set MSE vs Best Model of Each Size")
+
+
+# P6 PART D
+df.p6d.test <- data.frame(X_test_p6b,Y_test_p6b) 
+test.mat <- model.matrix(Y_test_p6b ~ ., data = df.p6d.test)
+val.errors.test <- rep(NA, p)
+
+for (i in 1:p) {
+  coefi <- coef(regfit, id = i)
+  pred <- test.mat[, names(coefi)] %*% coefi
+  val.errors.test[i] <- mean((Y_test_p6b - pred)^2)
+}
+
+plot(1:p, val.errors.test, xlab="Best Model of Each Size", ylab="Testing Set MSE", main="Testing Set MSE vs Best Model of Each Size")
+
+
+# P6 PART E
+print("Model size of minimum train error:")
+which.min(val.errors.train)
+print("Model size of minimum test error:")
+which.min(val.errors.test)
+
+print("Model size of 15 has minimum test error")
+
+
+
+# P6 PART F
+print("")
+print("coefficients of true model")
+B
+print("coefficients of 15-parameter model")
+coefficients(regfit, id=15)
+
+
+
+# P6 PART G
+
+df.p6g.full <- data.frame(Y,X)
+val.errors.6g <- rep(NA,p)
+xcolumns <- colnames(df.p6g.full)[-1]
+
+for (i in 1:p) {
+  coefi <- coef(regfit, id = i)
+  val.errors.6g[i] <- sqrt(sum((B[xcolumns %in% names(coefi)] - coefi[names(coefi) %in% xcolumns])^2) + sum(B[!(xcolumns %in% names(coefi))])^2)
+}
+
+plot(val.errors.6g, xlab = "Coefficients", ylab = "MSE", main = "6g. MSE vs Number of Predictors", type = "b")
+print("6g. Minimum error model size:")
+which.min(val.errors.6g)
+# Minimum errorin both cases is 15 parameters
+val.errors.6g
+```
+
+```
