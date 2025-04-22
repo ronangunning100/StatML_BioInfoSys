@@ -1,0 +1,805 @@
+---
+title: "FinalProject_TreeMethods_80_20_Split"
+author: "Stefan Pancari and Ronan McNally"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+Decision Trees present as another viable method for producing accurate HAR models using the dataset
+donated to the UCI repository from the researchers Anguita et al who developed the paper,
+"A Public Domain Dataset for Human Activity Recognition Using Smartphones"
+
+This markdown file contains our exploration and analysis of performance of the following tree methods for the 80/20 split:
+* singular Decision Tree (with pruning)
+* Bagging
+* Random Forest
+* Generative Boosting
+* XGBoosting
+
+
+# R Markdown of Tree Methods for 80/20 Split
+```{r}
+# Import libraries
+# NOTE: While a warning appears when importing these libraries given they were built during an earlier version of R 
+#       compared to the one in use, this does not appear to affect model performance.
+library(e1071)
+library(caret)
+library(doParallel)
+library(tree)
+library(mgsub) 
+library(randomForest)
+library(ggplot2)
+library(gbm)
+library(xgboost)
+
+set.seed(1) 
+```
+
+## Load and Format Data
+```{r}
+# Training Data (70%)
+X_train <- read.table(file.choose())
+
+y_train <- read.table(file.choose())
+
+subject_train <- read.table(file.choose())
+
+# Testing Data (30%)
+X_test <- read.table(file.choose())
+
+y_test <- read.table(file.choose())
+
+subject_test <- read.table(file.choose())
+
+
+# Features
+features <- read.table(file.choose())
+
+# Label columns of X training and testing data
+colnames(X_train) <- paste("Var", as.character(features$V1), features$V2, sep = "")
+colnames(X_test) <- paste("Var", as.character(features$V1), features$V2, sep = "")
+
+
+# Combine data. Note, must rename first and second column as subject and activity to reflect the original dataset, and must replace characters "(", ")", ",", and "-" as otherwise tree() errors from not being able to recognize column names
+train_data <- cbind(subject_train, y_train, X_train)
+test_data <- cbind(subject_test, y_test, X_test)
+
+# Rename columns for clarity
+colnames(train_data)[1:2] <- c("Subject", "Activity")
+colnames(train_data) <- mgsub(colnames(train_data), c("\\(", "\\)", "-",","), c("_", "_", "_", "_"))
+colnames(test_data)[1:2] <- c("Subject", "Activity")
+colnames(test_data) <- mgsub(colnames(test_data), c("\\(", "\\)", "-", ","), c("_", "_", "_", "_"))
+
+
+# SPLITTING INTO 80/20
+# Recombine the data by row
+full_data <- rbind(train_data, test_data)
+
+# Reshuffle the data
+full_data <- full_data[sample(nrow(full_data)), ]
+
+# Create split
+sample <- sample(1:nrow(full_data), size = nrow(full_data)*0.8, replace = FALSE)
+train_data <- full_data[sample, ]
+test_data <- full_data[-sample, ]
+
+
+
+
+
+
+#Extract levels from Activity columns to perform One Vs All SVM
+train_data$Activity <- as.factor(train_data$Activity)
+test_data$Activity <- as.factor(test_data$Activity)
+
+
+train_data <- as.data.frame(train_data)
+```
+
+
+## Singular Decision Tree
+```{r}
+HAR_tree <- tree(train_data$Activity ~ ., train_data)
+plot(HAR_tree)
+text(HAR_tree, pretty=0, cex=1.1) # pretty formats to look nice, cex controls text size
+
+cat("\nHAR tree output\n\n")
+summary(HAR_tree)
+
+cat("\nTraining Accuracy of Initial Tree:\n")
+cat((1-0.09725)*100, "%")
+
+# training accuracy is about 90.27%, which doesn't bode well by comparison for test accuracy (test accuracy is always worse)
+
+test.predict.test_data <- predict(HAR_tree, test_data, type="class")
+test_pred_table <- table(test.predict.test_data, test_data$Activity)
+test_pred_table
+cat("\nTest Accuracy of Initial Tree:\n")
+cat((sum(diag(test_pred_table))/sum(test_pred_table))*100, "%")
+
+# tree method with no additional corrections has a test accuracy of 86.41% error. Improve this via cross validation? ...
+
+```
+
+## Does Pruning Help the Single Decision Tree?
+```{r}
+# Single Decision Trees can be prone to overfitting. Using cross validation, we can check if overfitting can reduce error.
+cv.tree.trainmodel <- cv.tree(HAR_tree, FUN = prune.misclass)
+names(cv.tree.trainmodel)
+cv.tree.trainmodel
+#demonstrating how pruning does not improve error via plot
+plot(cv.tree.trainmodel$size, cv.tree.trainmodel$dev, type="b", col="darkgreen", xlab = "Tree Size", ylab = "Deviance")
+
+cat("\n Based on the output from cv.tree.trainmodel, it would appear that pruning does not meaningfully improve performance of the tree (e.g. k=-Inf for model size of 9 terminal nodes with a deviance of 1035 while k=0 (minimal pruning) has model size of 6 and has a deviance of 1035.\n")
+
+# It's apparent overfitting is not the issue truly the issue. While there is marginal improvement in deviance from 9 terminal nodes to 6 nodes (1035 to 1030 deviance), it's clear (as it was in the 70/30 split) that the issue is more so traversing the featurespace. So let's try bagging.
+```
+
+## Bagging
+```{r}
+c1 <- makeCluster(detectCores() - 1)
+registerDoParallel(c1)
+
+
+# explicitly having random forest to consider all 562 features at each split (mtry=562) to make it a bagging process)
+bagging.HARmodel <- randomForest(train_data$Activity ~ ., data = train_data, importance = TRUE, ntree = 500, parallel = TRUE, mtry = 562)
+
+stopCluster(c1)
+
+cat("\nPercent Correct Predictions for train data:\n")
+cat((sum(diag(bagging.HARmodel$confusion))/sum(bagging.HARmodel$confusion))*100, "%")
+
+
+summary(bagging.HARmodel$err.rate)
+
+
+
+bagging.test.predict <- predict(bagging.HARmodel, test_data, type="class")
+bagging.test_pred_table <- table(bagging.test.predict, test_data$Activity)
+bagging.test_pred_table
+cat("\nBagging Test Accuracy:\n")
+cat((sum(diag(bagging.test_pred_table))/sum(bagging.test_pred_table))*100, "%")
+
+# Extract the OOB error rate for each tree
+oob_errors_bagging <- bagging.HARmodel$err.rate[, 1]  # First column represents the OOB error for classification
+
+# Plot the OOB error vs the number of trees
+plot(1:500, oob_errors_bagging, type = "l", col = "blue", 
+     xlab = "Number of Trees", ylab = "OOB Error Rate", 
+     main = "OOB Error vs Number of Trees in Bagging Model")
+
+
+# NEXT STEP --> use the importance() function to find out which variables are most impactful in the bagging forest (not random forest)
+bagging.importantfeatures <- importance(bagging.HARmodel)
+bagging.importance_df <- data.frame(
+  Feature = rownames(bagging.importantfeatures),
+  Importance = bagging.importantfeatures[,"MeanDecreaseAccuracy"]
+)
+
+
+
+bagging.importance_df <- bagging.importance_df[order(bagging.importance_df$Importance, decreasing = TRUE),]
+
+topnum = 60
+top60features_bagging.importance_df <- head(bagging.importance_df, topnum)
+topfeatures_bagging.importance_df <- head(bagging.importance_df, length(bagging.importance_df[[1]]))
+
+ggplot(top60features_bagging.importance_df, aes(x = reorder(Feature, Importance), y = Importance)) + 
+  geom_bar(stat = "identity", fill = "blue") +
+  coord_flip() +
+  labs(title = paste("Top", topnum, "Most Important Features in Bagging"),
+       x = "Features",
+       y = "Mean Decrease in Accuracy") + 
+  theme_minimal()
+
+ggplot(topfeatures_bagging.importance_df, aes(x = reorder(Feature, Importance), y = Importance)) + 
+  geom_bar(stat = "identity", fill = "blue") +
+  coord_flip() +
+  labs(title = paste("Top", length(bagging.importance_df[[1]]), "Most Important Features in Bagging"),
+       x = "Features",
+       y = "Mean Decrease in Accuracy") + 
+  theme_minimal()
+
+
+
+# And we see that the use of an ensemble method (Bagging) meaningfully improves test accuracy by being able to traverse the full featurespace. However, strong predictors within the bagging method can dominate over some features, causing trees to be more similar/correlated and thereby reducing the reduction of variance/overfit that Bagging seeks to do via aggregating. Let's resolve this by using Random Forest...
+# Bagging test accuracy for 80/20 split is 97.67%
+```
+
+## Random Forest
+```{r}
+c1 <- makeCluster(detectCores() - 1)
+registerDoParallel(c1)
+
+# build RF model. Consider sqrt(feature number) at each split
+rf.HARmodel <- randomForest(train_data$Activity ~ ., data = train_data, importance = TRUE, ntree = 500, parallel = TRUE)
+
+stopCluster(c1)
+
+
+cat("\nPercent Correct Predictions for train data:\n")
+cat((sum(diag(rf.HARmodel$confusion))/sum(rf.HARmodel$confusion))*100, "%")
+
+
+summary(rf.HARmodel$err.rate)
+
+# Predict the test error for the RF model
+rf.test.predict <- predict(rf.HARmodel, test_data, type="class")
+rf.test_pred_table <- table(rf.test.predict, test_data$Activity)
+rf.test_pred_table # RF confusion matrix
+cat("\nRF Test Accuracy:\n")
+cat((sum(diag(rf.test_pred_table))/sum(rf.test_pred_table))*100, "%")
+
+
+# from above, train error is about 98.49% and test error is about 92.91% via the random forest method
+
+# NEXT STEP --> use the importance() function to find out which variables are most impactful in random forest (for this bit)
+rf.importantfeatures <- importance(rf.HARmodel)
+rf.importance_df <- data.frame(
+  Feature = rownames(rf.importantfeatures),
+  Importance = rf.importantfeatures[,"MeanDecreaseAccuracy"]
+)
+
+
+
+rf.importance_df <- rf.importance_df[order(rf.importance_df$Importance, decreasing = TRUE),]
+
+topnum = 60
+top60features_rf.importance_df <- head(rf.importance_df, topnum)
+topfeatures_rf.importance_df <- head(rf.importance_df, length(rf.importance_df[[1]]))
+
+ggplot(top60features_rf.importance_df, aes(x = reorder(Feature, Importance), y = Importance)) + 
+  geom_bar(stat = "identity", fill = "blue") +
+  coord_flip() +
+  labs(title = paste("Top", topnum, "Most Important Features in Random Forest"),
+       x = "Features",
+       y = "Mean Decrease in Accuracy") + 
+  theme_minimal()
+
+ggplot(topfeatures_rf.importance_df, aes(x = reorder(Feature, Importance), y = Importance)) + 
+  geom_bar(stat = "identity", fill = "blue") +
+  coord_flip() +
+  labs(title = paste("Top", length(rf.importance_df[[1]]), "Most Important Features in Random Forest"),
+       x = "Features",
+       y = "Mean Decrease in Accuracy") + 
+  theme_minimal()
+
+
+# As can be seen, by randomly sampling the features to be considered at each split, we limit the domination of strong predictors, maintain variance/overfit reduction, and thereby improve test accuracy from 97.67% to 97.91%. However, let's see if limiting the maximimum number of terminal nodes can improve RF test accuracy further...
+```
+
+
+## Tuning maxnode of RF
+```{r}
+# the automatic maximum number of nodes that the random forest builds out is 773
+# Tune by reducing max number of nodes such that it reduces overfit...
+# NOTE: train() didn't support tuning maxnode parameter in the tuning grid, hence running multiple chunks of the randomForest() command with different maxnode values.
+
+c1 <- makeCluster(detectCores() - 1)
+registerDoParallel(c1)
+
+# build RF model. Consider sqrt(feature number) at each split
+rf.HARmodel_mn700 <- randomForest(train_data$Activity ~ ., data = train_data, importance = TRUE, ntree = 500, parallel = TRUE, maxnode = 700)
+rf.test.predict_mn700 <- predict(rf.HARmodel_mn700, test_data, type="class")
+rf.test_pred_table_mn700 <- table(rf.test.predict_mn700, test_data$Activity)
+rf.test_pred_table_mn700 # RF confusion matrix
+cat("\n Max Node 700 RF Test Accuracy:\n")
+cat((sum(diag(rf.test_pred_table_mn700))/sum(rf.test_pred_table_mn700))*100, "%")
+# Resulting Accuracy: 98.06%
+
+# build RF model. Consider sqrt(feature number) at each split
+rf.HARmodel_mn720 <- randomForest(train_data$Activity ~ ., data = train_data, importance = TRUE, ntree = 500, parallel = TRUE, maxnode = 720)
+rf.test.predict_mn720 <- predict(rf.HARmodel_mn720, test_data, type="class")
+rf.test_pred_table_mn720 <- table(rf.test.predict_mn720, test_data$Activity)
+rf.test_pred_table_mn720 # RF confusion matrix
+cat("\n Max Node 720 RF Test Accuracy:\n")
+cat((sum(diag(rf.test_pred_table_mn720))/sum(rf.test_pred_table_mn720))*100, "%")
+# Resulting Accuracy: 98.06%
+
+# build RF model. Consider sqrt(feature number) at each split
+rf.HARmodel_mn730 <- randomForest(train_data$Activity ~ ., data = train_data, importance = TRUE, ntree = 500, parallel = TRUE, maxnode = 730)
+rf.test.predict_mn730 <- predict(rf.HARmodel_mn730, test_data, type="class")
+rf.test_pred_table_mn730 <- table(rf.test.predict_mn730, test_data$Activity)
+rf.test_pred_table_mn730 # RF confusion matrix
+cat("\n Max Node 730 RF Test Accuracy:\n")
+cat((sum(diag(rf.test_pred_table_mn730))/sum(rf.test_pred_table_mn730))*100, "%")
+# Resulting Accuracy: 98.20% ## BEST ONE --> same as in 70/30
+
+
+# build RF model. Consider sqrt(feature number) at each split
+rf.HARmodel_mn740 <- randomForest(train_data$Activity ~ ., data = train_data, importance = TRUE, ntree = 500, parallel = TRUE, maxnode = 740)
+rf.test.predict_mn740 <- predict(rf.HARmodel_mn740, test_data, type="class")
+rf.test_pred_table_mn740 <- table(rf.test.predict_mn740, test_data$Activity)
+rf.test_pred_table_mn740 # RF confusion matrix
+cat("\n Max Node 740 RF Test Accuracy:\n")
+cat((sum(diag(rf.test_pred_table_mn740))/sum(rf.test_pred_table_mn740))*100, "%")
+# Resulting Accuracy: 98.11%
+
+# build RF model. Consider sqrt(feature number) at each split
+rf.HARmodel_mn735 <- randomForest(train_data$Activity ~ ., data = train_data, importance = TRUE, ntree = 500, parallel = TRUE, maxnode = 735)
+rf.test.predict_mn735 <- predict(rf.HARmodel_mn735, test_data, type="class")
+rf.test_pred_table_mn735 <- table(rf.test.predict_mn735, test_data$Activity)
+rf.test_pred_table_mn735 # RF confusion matrix
+cat("\n Max Node 735 RF Test Accuracy:\n")
+cat((sum(diag(rf.test_pred_table_mn735))/sum(rf.test_pred_table_mn735))*100, "%")
+# Resulting Accuracy: 98.00%
+
+
+# build RF model. Consider sqrt(feature number) at each split
+rf.HARmodel_mn725 <- randomForest(train_data$Activity ~ ., data = train_data, importance = TRUE, ntree = 500, parallel = TRUE, maxnode = 725)
+rf.test.predict_mn725 <- predict(rf.HARmodel_mn725, test_data, type="class")
+rf.test_pred_table_mn725 <- table(rf.test.predict_mn725, test_data$Activity)
+rf.test_pred_table_mn725 # RF confusion matrix
+cat("\n Max Node 725 RF Test Accuracy:\n")
+cat((sum(diag(rf.test_pred_table_mn725))/sum(rf.test_pred_table_mn725))*100, "%")
+# Resulting Accuracy: 97.86%
+
+stopCluster(c1)
+
+
+# As can be seen, the test accuracy for RF of the 80/20 split is improved by reducing the maximimum number of terminal nodes improves as it lowers overfit. Test accuracy goes from 97.91% --> 98.20%
+
+```
+
+Notice that the mean decrease in (training) accuracy is not only decreased overall between bagging and random forest,
+but also that random forest has a much thicker "tail" (which is to say there's a far less precipitous drop from the dominant features
+to the less dominant features). This visually shows how RF's random sampling of the features helps prevent strong predictor domination and improve testing accuracy as a result.
+Note: re-running the code resulted in a different features vs mean decrease in accuracy plot compared to the one made for the presentation. However, it was realized that set.seed() had not been performed and so this discrepancy is likely the result of a different set of random features being selected. This is fixed by writing set.seed(1). 
+
+
+While Random Forest is a marked improvement, it still is not at the same accuracy as the paper's SVM. Weak learners of Generative Boosting would be likely to improve upon this. 
+
+
+## Generative Boosting with Tuning
+```{r}
+numberOfTrees <- 500
+
+
+# Below are multiple models for running generative boosting on the training data. The multiple models are for the explicit purpose of performing a sequential search for the optimal shrinkage factor given previous a value from 0.2
+
+
+
+boost_model <- gbm(
+  formula = train_data$Activity ~ . ,
+  #distribution = "gaussian",
+  data = train_data,
+  n.trees = 500,
+  interaction.depth = 1,
+  n.minobsinnode = 10,
+  shrinkage = 0.01,
+  cv.folds = 10,
+  keep.data = TRUE,
+  n.cores = 7
+)
+
+
+boost_model0 <- gbm(
+  formula = train_data$Activity ~ . ,
+  #distribution = "gaussian",
+  data = train_data,
+  n.trees = numberOfTrees,
+  interaction.depth = 1,
+  n.minobsinnode = 10,
+  shrinkage = 0.3,
+  cv.folds = 10,
+  keep.data = TRUE,
+  n.cores = 7
+)
+
+boost_model1 <- gbm(
+  formula = train_data$Activity ~ . ,
+  #distribution = "gaussian",
+  data = train_data,
+  n.trees = numberOfTrees,
+  interaction.depth = 1,
+  n.minobsinnode = 10,
+  shrinkage = 0.31,
+  cv.folds = 10,
+  keep.data = TRUE,
+  n.cores = 7
+)
+
+boost_model2 <- gbm(
+  formula = train_data$Activity ~ . ,
+  #distribution = "gaussian",
+  data = train_data,
+  n.trees = numberOfTrees,
+  interaction.depth = 1,
+  n.minobsinnode = 10,
+  shrinkage = 0.315,
+  cv.folds = 10,
+  keep.data = TRUE,
+  n.cores = 7
+)
+
+boost_model3 <- gbm(
+  formula = train_data$Activity ~ . ,
+  #distribution = "gaussian",
+  data = train_data,
+  n.trees = numberOfTrees,
+  interaction.depth = 1,
+  n.minobsinnode = 10,
+  shrinkage = .32,
+  cv.folds = 10,
+  keep.data = TRUE,
+  n.cores = 7
+)
+
+boost_model4 <- gbm(
+  formula = train_data$Activity ~ . ,
+  #distribution = "gaussian",
+  data = train_data,
+  n.trees = numberOfTrees,
+  interaction.depth = 1,
+  n.minobsinnode = 10,
+  shrinkage = .325,
+  cv.folds = 10,
+  keep.data = TRUE,
+  n.cores = 7
+)
+
+boost_model5 <- gbm(
+  formula = train_data$Activity ~ . ,
+  #distribution = "gaussian",
+  data = train_data,
+  n.trees = numberOfTrees,
+  interaction.depth = 1,
+  n.minobsinnode = 10,
+  shrinkage = 0.33,
+  cv.folds = 10,
+  keep.data = TRUE,
+  n.cores = 7
+)
+
+# BEST PERFORMING MODEL:
+boost_model6 <- gbm(
+  formula = train_data$Activity ~ . ,
+  #distribution = "gaussian",
+  data = train_data,
+  n.trees = numberOfTrees,
+  interaction.depth = 1,
+  n.minobsinnode = 10,
+  shrinkage = 0.335,
+  cv.folds = 10,
+  keep.data = TRUE,
+  n.cores = 7
+)
+boost_model7 <- gbm(
+  formula = train_data$Activity ~ . ,
+  #distribution = "gaussian",
+  data = train_data,
+  n.trees = numberOfTrees,
+  interaction.depth = 1,
+  n.minobsinnode = 10,
+  shrinkage = 0.34,
+  cv.folds = 10,
+  keep.data = TRUE,
+  n.cores = 7
+)
+
+boost_model8 <- gbm(
+  formula = train_data$Activity ~ . ,
+  #distribution = "gaussian",
+  data = train_data,
+  n.trees = numberOfTrees,
+  interaction.depth = 1,
+  n.minobsinnode = 10,
+  shrinkage = 0.345,
+  cv.folds = 10,
+  keep.data = TRUE,
+  n.cores = 7
+)
+
+boost_model9 <- gbm(
+  formula = train_data$Activity ~ . ,
+  #distribution = "gaussian",
+  data = train_data,
+  n.trees = numberOfTrees,
+  interaction.depth = 1,
+  n.minobsinnode = 10,
+  shrinkage = 0.35,
+  cv.folds = 10,
+  keep.data = TRUE,
+  n.cores = 7
+)
+
+boost_model10 <- gbm(
+  formula = train_data$Activity ~ . ,
+  #distribution = "gaussian",
+  data = train_data,
+  n.trees = numberOfTrees,
+  interaction.depth = 1,
+  n.minobsinnode = 10,
+  shrinkage = 0.355,
+  cv.folds = 10,
+  keep.data = TRUE,
+  n.cores = 7
+)
+
+boost_model11 <- gbm(
+  formula = train_data$Activity ~ . ,
+  #distribution = "gaussian",
+  data = train_data,
+  n.trees = numberOfTrees,
+  interaction.depth = 1,
+  n.minobsinnode = 10,
+  shrinkage = 0.36,
+  cv.folds = 10,
+  keep.data = TRUE,
+  n.cores = 7
+)
+
+boost_model12 <- gbm(
+  formula = train_data$Activity ~ . ,
+  #distribution = "gaussian",
+  data = train_data,
+  n.trees = numberOfTrees,
+  interaction.depth = 1,
+  n.minobsinnode = 10,
+  shrinkage = 0.365,
+  cv.folds = 10,
+  keep.data = TRUE,
+  n.cores = 7
+)
+
+boost_model13 <- gbm(
+  formula = train_data$Activity ~ . ,
+  #distribution = "gaussian",
+  data = train_data,
+  n.trees = numberOfTrees,
+  interaction.depth = 1,
+  n.minobsinnode = 10,
+  shrinkage = 0.37,
+  cv.folds = 10,
+  keep.data = TRUE,
+  n.cores = 7
+)
+
+boost_model14 <- gbm(
+  formula = train_data$Activity ~ . ,
+  #distribution = "gaussian",
+  data = train_data,
+  n.trees = numberOfTrees,
+  interaction.depth = 1,
+  n.minobsinnode = 10,
+  shrinkage = 0.29,
+  cv.folds = 10,
+  keep.data = TRUE,
+  n.cores = 7
+)
+boost_model15 <- gbm(
+  formula = train_data$Activity ~ . ,
+  #distribution = "gaussian",
+  data = train_data,
+  n.trees = numberOfTrees,
+  interaction.depth = 1,
+  n.minobsinnode = 10,
+  shrinkage = 0.295,
+  cv.folds = 10,
+  keep.data = TRUE,
+  n.cores = 7
+)
+boost_model16 <- gbm(
+  formula = train_data$Activity ~ . ,
+  #distribution = "gaussian",
+  data = train_data,
+  n.trees = numberOfTrees,
+  interaction.depth = 1,
+  n.minobsinnode = 10,
+  shrinkage = 0.2975,
+  cv.folds = 10,
+  keep.data = TRUE,
+  n.cores = 7
+)
+boost_model17 <- gbm(
+  formula = train_data$Activity ~ . ,
+  #distribution = "gaussian",
+  data = train_data,
+  n.trees = numberOfTrees,
+  interaction.depth = 1,
+  n.minobsinnode = 10,
+  shrinkage = 0.305,
+  cv.folds = 10,
+  keep.data = TRUE,
+  n.cores = 7
+)
+
+# Results from various gbm models w/ different hyperparameter values (Test accuracy)
+
+# bm  shrinkage= 0.01    Accuracy: 94.02913 %
+# bm0 shrinkage= 0.3     Accuracy: 98.59223 %
+# bm1 shrinkage= 0.31    Accuracy: 98.88350 %
+# bm2 shrinkage= 0.315   Accuracy: 98.30097 %
+# bm3 shrinkage= 0.32    Accuracy: 98.39806 %
+# bm4 shrinkage= 0.325   Accuracy: 99.02913 % # BEST PERFORMING
+# bm5 shrinkage= 0.33    Accuracy: 98.49515 %
+# bm6 shrinkage= 0.335   Accuracy: 98.34951 %
+# bm7 shrinkage= 0.34    Accuracy: 98.49515 %
+# bm8 shrinkage= 0.345   Accuracy: 98.49515 %
+# bm9 shrinkage= 0.35    Accuracy: 98.49515 %
+# bm10 shrinkage= 0.355  Accuracy: 98.64078 %
+# bm11 shrinkage= 0.36   Accuracy: 98.44660 %
+# bm12 shrinkage= 0.365  Accuracy: 98.44660 %
+# bm13 shrinkage= 0.37   Accuracy: 98.44660 %
+# bm14 shrinkage= 0.29   Accuracy: 98.78641 %
+# bm15 shrinkage= 0.295  Accuracy: 98.78641 %
+# bm16 shrinkage= 0.2975 Accuracy: 98.54369 %
+# bm17 shrinkage= 0.305  Accuracy: 98.73786 %
+# on previous run these values were obtained
+```
+
+## Evaluating Generative Boosting Accuracy
+```{r}
+boost.test.predict <- predict(boost_model4, test_data, n.trees = 500, type = "response")
+
+
+# Extract the 2D matrix (from the 3D array)
+boost.test.predict2D <- boost.test.predict[, , 1]
+
+# Column names
+column_names <- colnames(boost.test.predict2D)
+
+# Initialize an empty list to store results
+max_values_list <- list()
+
+
+
+# Apply function to find the max value and its column name for each row
+max_values_list <- apply(boost.test.predict2D, 1, function(row) {
+  max_index <- which.max(row)
+  column_names[max_index]
+})
+
+max_values_list <- as.integer(max_values_list)
+
+
+
+boost.test_pred_table <- table(max_values_list, test_data$Activity)
+boost.test_pred_table
+cat("\nGenerative Boost Test Accuracy for: boost_model4 (best performing)\n") # update if bm# changes
+cat((sum(diag(boost.test_pred_table))/sum(boost.test_pred_table))*100, "%")
+```
+
+
+
+## XGBoosting
+```{r}
+
+# Data needs to be a Matrix
+# Y values have to be numeric
+X_train_matrix <- as.matrix(as.matrix(train_data[,3:563]))
+X_test_matrix <- as.matrix(as.matrix(test_data[,3:563]))
+
+y_train_factor <- factor(train_data$Activity)
+y_test_factor <- factor(test_data$Activity)
+
+
+# Perform Stepwise Hyperparameter Tuning 
+
+
+# # Perform Stepwise Hyperparameter Tuning
+# c1 <- makeCluster(detectCores() - 1)
+# registerDoParallel(c1)
+# 
+# 
+# train_control <- trainControl(
+#   method = "cv", # Cross Validation
+#   number = 10, # 10-fold
+#   verboseIter = TRUE,# Print out iteration status
+#   allowParallel = TRUE
+# )
+# 
+# # Hyperparameters
+# eta_depth_grid <- expand.grid(
+#   eta = 0.333,
+#   max_depth = 3,
+#   gamma = 0.0103, 
+#   colsample_bytree = 0.13,
+#   min_child_weight = 0.016, 
+#   subsample = 0.95,
+#   nrounds = 100 #161
+# )
+# 
+# xgb_eta_depth_tuned <- train(
+#   x = X_train_matrix,
+#   y = y_train_factor,
+#   method = "xgbTree", # XGBoost
+#   trControl = train_control,
+#   tuneGrid = eta_depth_grid,
+#   metric = "Accuracy" # Train on Accuracy
+# )
+# 
+# # best_eta <- xgb_eta_depth_tuned$bestTune$eta
+# # best_max_depth <- xgb_eta_depth_tuned$bestTune$max_depth
+# # best_gamma <- xgb_eta_depth_tuned$bestTune$best_gamma
+# # colsample_bytree <- xgb_eta_depth_tuned$bestTune$colsample_bytree
+# # min_child_weight <- xgb_eta_depth_tuned$bestTune$min_child_weight
+# # subsample <- xgb_eta_depth_tuned$bestTune$subsample
+# # nrounds <- xgb_eta_depth_tuned$bestTune$nrounds
+
+# stopCluster(c1)
+
+# Results of Stepwise Hyperparameter Tuning
+best_eta <- 0.333
+best_max_depth <- 3
+best_gamma <- 0.0103
+colsample_bytree <- 0.13
+min_child_weight <- 0.016
+subsample <- 0.95
+nrounds <- 161
+
+
+
+
+
+# Train the XGBoost Model...
+
+# Train the final model with best parameters
+
+# The output must be a numeric type starting from 0
+y_train_numeric <- as.numeric(train_data$Activity) - 1
+y_test_numeric <- as.numeric(test_data$Activity) - 1
+
+# Training and testing data must be in a matrix format
+dtrain <- xgb.DMatrix(data = X_train_matrix, label = y_train_numeric)
+dtest <- xgb.DMatrix(data =X_test_matrix, label = y_test_numeric)
+
+# Create final XGBoost model with best hyperparamters
+xgboosting.HARmodel <- xgboost(
+  data = dtrain,
+  eta = best_eta,             # 0.333
+  max_depth = best_max_depth, # 3
+  gamma = best_gamma,         # 0.0103
+  colsample_bytree = colsample_bytree, # 0.13
+  min_child_weight = min_child_weight, # 0.016
+  subsample = subsample,      # 0.95
+  nrounds = nrounds,          # 161
+  objective = "multi:softprob",
+  num_class = length(unique(train_data$Activity)),
+  verbose = 0
+)
+
+
+
+print(xgboosting.HARmodel)
+
+
+
+# Create XGBoost's Confusion Matrix...
+
+# Make predictions on the test set
+predictions_prob <- predict(xgboosting.HARmodel, dtest)
+predictions <- matrix(predictions_prob, nrow = length(y_test_numeric), byrow = TRUE)
+predicted_classes <- max.col(predictions) - 1
+
+# Get the original activity levels
+activity_levels <- levels(factor(test_data$Activity))
+
+# Convert numeric predictions back to factor levels
+predicted_classes_factor <- factor(predicted_classes, 
+                                   levels = 0:(length(activity_levels)-1), 
+                                   labels = activity_levels)
+
+# Convert y_test_numeric back to factor with original levels
+y_test_factor <- factor(y_test_numeric, 
+                        levels = 0:(length(activity_levels)-1), 
+                        labels = activity_levels)
+
+# Create confusion matrix
+conf_matrix <- confusionMatrix(predicted_classes_factor, y_test_factor)
+
+# Print confusion matrix
+print(conf_matrix)
+
+# Overall accuracy
+overall_accuracy <- conf_matrix$overall['Accuracy']
+print(paste("Overall Test Accuracy:", overall_accuracy))
+
+# Test Accuracy found on run: 99.37%
+```
+
