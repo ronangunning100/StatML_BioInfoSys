@@ -1,0 +1,293 @@
+---
+title: "rm4064"
+author: "Ronan McNally"
+date: "2024-09-20"
+output:
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+
+```
+**Question 3**
+
+
+```{r}
+# Q3.part(a) 
+
+set.seed(1) # sets the seed for repoducible randomness
+
+x <- rnorm(100, mean = 0, sd = 1)
+
+
+# Q3.part(b) 
+
+eps <- rnorm(100, mean = 0, sd = 0.25)
+
+# Q3.part(c) 
+
+y <- -1 + 0.5*x + eps
+
+length(y) # outputs length, length of vector y is 100
+
+#  β0 is equal to -1, β1 is equal to 0.5 in the linear model
+
+
+
+# Q3.part(d) 
+
+plot(x, y)
+
+#   Based off of visual appearance, it would appear y is somewhat directly proportional to x.
+```
+
+
+```{r}
+# Q3.part(e)
+sample_model <- lm(y ~ x)
+
+summary(sample_model)
+
+# From viewing the following summary data of the sample model, βhat0 is -1.00942 and βhat1 is 0.49973. βhat0 is slightly more than β0 and βhat1 is slightly less than β1 but both estimated betas closely approximate the true betas.
+```
+
+
+```{r}
+# Q3.part(f)
+
+plot(x, y)
+abline(sample_model, col="blue")
+abline(-1, 0.5, col="red") #creates line equivalent to population model
+
+
+#legend("topright", legend = c("Sample Model", "Population Model"),)
+legend("bottomright", inset=.05,c("sample model","population model"), lwd=2, lty=c(1, 1), col=c("blue","red"), box.lty=0)
+```
+
+
+
+```{r}
+# Q3.part(g)
+
+polyfit_model <- lm(y ~ x + I(x^2))
+summary((polyfit_model))
+
+
+anova(sample_model, polyfit_model)
+
+# In the results from the summary of the polynomial fit, it shows a similarly significantly small p-value to that of the linear fit (2e-16) and a large F-value (which, while smaller than the linear fit, is still significant).
+# Following this up with an anova test whose null hypothesis is that both models fit the data equally well, it's resulting P-value of 0.1638>0.05, therefore we do not reject the null hypothesis. Both of these results indicate a polynomial fit does not have a better fit. This is particularly underlined by the p-value for the x^2 term demonstrating weak significance (p_I(x^2)=0.164>0.05) while the x term and intercept (the terms of the sample model) show strong significance with very small p values.
+```
+
+
+```{r}
+
+# Q3.part(h)
+
+set.seed(1)
+
+x_h <- rnorm(100, mean = 0, sd = 1)
+
+eps_h <- rnorm(100, mean = 0, sd = 0.1) # lowered from 0.25 to 0.1 --> point of fact: this is the stand dev term, not the variance as described in the question
+
+y_h <- -1 + 0.5*x_h + eps_h
+
+length(y_h)
+
+plot(x_h, y_h)
+
+sample_model_h <- lm(y_h ~ x_h)
+
+summary(sample_model_h)
+abline(sample_model_h, col="blue")
+abline(-1, 0.5, col="red")
+
+
+#legend("topright", legend = c("Sample Model", "Population Model"),)
+legend("bottomright", inset=.05,c("sample model","population model"), lwd=2, lty=c(1, 1), col=c("blue","red"), box.lty=0)
+
+
+polyfit_model_h <- lm(y_h ~ x_h + I(x_h^2))
+summary((polyfit_model_h))
+
+
+anova(sample_model_h, polyfit_model_h)
+
+# By reducing the noise in the data, it appears that the βhat0 and βhat1 terms *more* closely approximate the β0 and β1 terms respectively (going from -1.00942 to -1.003769 and from 0.49973 to 0.499894 respectively) and t-values for both beta hats increase in magnitude, implying a better fit for the sample model of the population model (β0=-1, β1=0.5). The length of vector y remains the same. The scatterplot of x and y still show a direct proportional relationship but now more closely clustered about the sample model trendline. As for the quadratic fit, it appears it still remains no more an improvement of fit compared to the sample model with just x (the probability from both the summary and anova test remain the same, insignificant, values).
+
+
+```
+
+```{r}
+
+# Q3.part(i)
+
+set.seed(1)
+
+x_i <- rnorm(100, mean = 0, sd = 1)
+
+eps_i <- rnorm(100, mean = 0, sd = 0.5) # increased from 0.25 to 0.5 --> point of fact: this is the stand dev term, not the variance as described in the question
+
+y_i <- -1 + 0.5*x_i + eps_i
+
+length(y_i)
+
+plot(x_i, y_i)
+
+sample_model_i <- lm(y_i ~ x_i)
+
+summary(sample_model_i)
+abline(sample_model_i, col="blue")
+abline(-1, 0.5, col="red")
+
+
+#legend("topright", legend = c("Sample Model", "Population Model"),)
+legend("bottomright", inset=.05,c("sample model","population model"), lwd=2, lty=c(1, 1), col=c("blue","red"), box.lty=0)
+
+
+polyfit_model_i <- lm(y_i ~ x_i + I(x_i^2))
+summary((polyfit_model_i))
+
+
+anova(sample_model_i, polyfit_model_i)
+
+# By increasing the noise in the data, it appears that the βhat0 and βhat1 terms *less* closely approximate the β0 and β1 terms respectively (going from -1.00942 to -1.01885 and from 0.49973 to 0.49947 respectively) and t-values for both beta hats decrease in magnitude, implying a worse fit for the sample model of the population model (β0=-1, β1=0.5). The length of vector y remains the same. The scatterplot of x and y still show a vague direct proportional relationship but now exhibits greater spread from the sample model trendline. As for the quadratic fit, it appears it still remains no more an improvement of fit compared to the sample model with just x (the significance of the x^2 factor from both the summary and anova test remain the same, insignificant, values). However, of note is that the significance of the intercept and x terms of the quadratic fit do decrease (smaller t-values and larger p values in the summary). This is to be expected as the quadratic model has shown no improvement over the linear fit and reduced "fitness" of the linear sample model becomes reflected in the summary data of the quadratic model.
+```
+
+```{r}
+
+# Q3.part(i)
+
+
+confint(sample_model) # original model
+
+confint(sample_model_h) # less noisy model
+
+confint(sample_model_i) # more noisy model
+
+# The confidence interval represents the range of values over which an estimate is likely to fall in. In a 95% confidence interval, this means that 95/100 times, an estimate for said parameter will fall between said interval/range. Below, the 2.5% and 97.5% columns are the lower and upper bounds on a normal distribution which represent 95% of said distribution symmetrically about the mean. As can be seen upon inspection of the confidence intervals below, as noise increases, the range of values for βhat0 (intercept) and βhat1 (x, x_h, x_i) become larger. This reflects the drop in precision our estimates experience as a result of noise.
+
+```
+
+
+```{r}
+
+```
+
+
+**Question 4**
+
+```{r}
+# Q4
+
+# first load data 
+setwd("C:/Users/Owner/OneDrive - Northeastern University/Desktop/A_Columbia/Courses/Fall2024/Machine Learning/Homework1")
+Advertising <- read.csv("Advertising.csv",header=T,na.strings="?")
+dim(Advertising)
+Advertising <- na.omit(Advertising)
+names(Advertising)
+
+
+lmP4_TVsales <- lm(Advertising$sales~Advertising$TV)
+confint(lmP4_TVsales, level=0.92) # confidence Intervals For Model Parameters
+plot(Advertising$TV, Advertising$sales, xlab="TV", ylab="Sales", main = "Sales vs TV")
+abline(6.22691926, .04330989, col="red", lty=2)
+abline(7.83826784, 0.05227135, col="red", lty=2)
+abline(lmP4_TVsales, col="blue")
+
+lmP4_Radiosales <- lm(Advertising$sales~Advertising$radio)
+confint(lmP4_Radiosales, level=0.92) # confidence Intervals For Model Parameters
+plot(Advertising$radio, Advertising$sales, xlab="Radio", ylab="Sales", main = "Sales vs Radio")
+abline(8.3210922, 0.1665776, col="red", lty=2)
+abline(10.3021840, 0.2384139, col="red", lty=2)
+abline(lmP4_Radiosales, col="blue")
+
+lmP4_Newspapersales <- lm(Advertising$sales~Advertising$newspaper)
+confint(lmP4_Newspapersales, level=0.92) # confidence Intervals For Model Parameters
+plot(Advertising$newspaper, Advertising$sales, xlab="Newspaper", ylab="Sales", main = "Sales vs Newspaper")
+abline(11.25788302 , 0.02552451  , col="red", lty=2)
+abline(13.44493112, 0.08386169, col="red", lty=2)
+abline(lmP4_Newspapersales, col="blue")
+
+
+
+```
+
+
+```{r}
+
+```
+
+**Question 5**
+
+```{r}
+# first load data
+
+# first load data 
+Auto <- read.csv("Auto.csv",header=T,na.strings="?")
+dim(Auto)
+Auto <- na.omit(Auto)
+names(Auto)
+
+
+# Q5.part(a)
+
+plot(Auto)
+
+
+# Q5.part(b)
+
+cor(Auto[1:8])
+print("********************************************************************")
+
+# Q5.part(c)
+
+lmP5 <- lm(Auto$mpg ~ Auto$cylinders+Auto$displacement+Auto$horsepower+Auto$weight+Auto$acceleration+Auto$year+Auto$origin)
+
+summary(lmP5)
+print("********************************************************************")
+# (ci) Yes, assuming an alpha=0.05, there is an apparent relationship between the predictors and the response
+
+# (cii) The predictors "year" and "weight" appear to have the most statistically significant relationship to the response. This is followed by "origin." Still significantly significant but by a much smaller margin are "cylinders" and "displacement." The remainder are statistically insignificant as indicators.
+
+# (ciii) The coefficient of "year" is 0.750773. This suggests a direct proportional relationship between mpg and year of the car such that around every 4 improvements in car design and manufacturing mean you can travel 3 miles further for the same gallon of gas.
+
+
+# Q5.part(d)
+
+lmP5_log <- lm(Auto$mpg ~ log(Auto$cylinders)+log(Auto$displacement)+log(Auto$horsepower)+log(Auto$weight)+log(Auto$acceleration)+log(Auto$year)+log(Auto$origin))
+
+summary(lmP5_log)
+
+ 
+
+lmP5_sqrt <- lm(Auto$mpg ~ sqrt(Auto$cylinders)+sqrt(Auto$displacement)+sqrt(Auto$horsepower)+sqrt(Auto$weight)+sqrt(Auto$acceleration)+sqrt(Auto$year)+sqrt(Auto$origin))
+
+summary(lmP5_sqrt)
+
+
+lmP5_sqr <- lm(Auto$mpg ~ (Auto$cylinders)^2+(Auto$displacement)^2+(Auto$horsepower)^2+(Auto$weight)^2+(Auto$acceleration)^2+(Auto$year)^2+(Auto$origin)^2)
+
+summary(lmP5_sqr)
+
+
+# RESULTS OF TRANSFORMS: Across all transforms, year and weight remain highly statistically significant as an indicator. When log transform is applied, acceleration and horsepower becomes statistically significant indicators while origin weakens in significance and displacement becomes insignificant. Under the sqrt() transform of the variables, displacement becomes statistically insignificant while horsepower becomes (weakly) statistically significant. Finally, no change in significants appears to occur for any of the indicators upon squaring them.
+```
+
+
+
+
+
