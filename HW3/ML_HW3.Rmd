@@ -1,0 +1,174 @@
+---
+title: "rm4064"
+author: "Ronan McNally"
+date: "2024-10-14"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+
+
+
+```{r}
+library(matlib)
+
+X <- c(0.0, 0.2, 0.4, 0.6, 0.8, 1.0)
+Y <- c(0, 0, 0, 1, 0, 1)
+
+B_old <- c(0, 0)
+
+
+S.1 <- sum(((exp(B_old[1] + B_old[2]*X))/(1+exp(B_old[1] + B_old[2]*X)))-Y)
+S.2 <- sum((X*(exp(B_old[1] + B_old[2]*X)/(1+exp(B_old[1] + B_old[2]*X))))-(X*Y))
+Smat <- matrix( c(S.1, S.2), nrow=2, ncol=1)
+
+J.11 <- sum((exp(B_old[1] + B_old[2]*X))/(1+exp(B_old[1] + B_old[2]*X))^2)
+J.12 <- sum(X*exp(B_old[1] + B_old[2]*X)/((1+exp(B_old[1] + B_old[2]*X))^2))
+J.21 <- sum(X*exp(B_old[1] + B_old[2]*X)/((1+exp(B_old[1] + B_old[2]*X))^2))
+J.22 <- sum((X^2)*exp(B_old[1] + B_old[2]*X)/((1+exp(B_old[1] + B_old[2]*X))^2))
+Jmat <- matrix( c(J.11, J.21, J.12, J.22), nrow=2, ncol=2)
+
+B_all <- matrix(0, nrow=2, ncol=10)
+
+for (i in 1:10) {
+  B_new <- B_old - inv(Jmat)%*%Smat
+  B_old <- B_new
+
+  
+  S.1 <- sum(((exp(B_old[1] + B_old[2]*X))/(1+exp(B_old[1] + B_old[2]*X)))-Y)
+  S.2 <- sum((X*(exp(B_old[1] + B_old[2]*X)/(1+exp(B_old[1] + B_old[2]*X))))-(X*Y))
+  Smat <- matrix( c(S.1, S.2), nrow=2, ncol=1)
+  
+  J.11 <- sum((exp(B_old[1] + B_old[2]*X))/(1+exp(B_old[1] + B_old[2]*X))^2)
+  J.12 <- sum(X*exp(B_old[1] + B_old[2]*X)/((1+exp(B_old[1] + B_old[2]*X))^2))
+  J.21 <- sum(X*exp(B_old[1] + B_old[2]*X)/((1+exp(B_old[1] + B_old[2]*X))^2))
+  J.22 <- sum((X^2)*exp(B_old[1] + B_old[2]*X)/((1+exp(B_old[1] + B_old[2]*X))^2))
+  Jmat <- matrix( c(J.11, J.21, J.12, J.22), nrow=2, ncol=2)
+  
+  B_all[,i]<-B_new
+  
+  cat("\nIteration number ",i,", beta0= ",B_new[1],"     beta1= ",B_new[2],"\n")
+}
+
+
+
+```
+
+
+
+
+Question 7
+```{r cars}
+
+# P7 Part A
+
+library(ISLR2)
+set.seed(1000)
+
+n <- 800
+data(OJ)
+
+train_indices <- sample(1:nrow(OJ), n)
+train <- OJ[train_indices, ]
+
+test_indices <- -train_indices
+test <- OJ[test_indices, ]
+
+
+# P7 Part B
+
+library(tree)
+OJ_tree <- tree(train$Purchase ~ ., data=train)#remove class?
+summary(OJ_tree)
+
+cat("\nP7B output\n\n")
+cat("\n \t The number of terminal nodes is 8 \n \t The training error (misclassification error rate) is 0.16 \n \n")
+
+
+# P7 Part C
+
+cat("\nP7C output\n\n")
+OJ_tree
+
+cat("\n\nTerminating node: '24) PriceDiff < -0.35 16   17.99 MM ( 0.25000 0.75000 ) *' \n \nTerminating node (24) divides along price difference The -.35 refers to MM being 35 cents less expensive than CH as a dividing line. Meaning if CH is less than 35 cents more expensive than MM, people choose MM. If CH is more than 35 cents more expensive than MM, people choose CH. The numer of people in this decision split is n=16. The 'deviance' is a representation of the 'purity' of the dividing line (a metric of how many MM are in my CH bucket, how many CH in my MM bucket). MM represents the choice direction (e.g. people choose MM when <-.35) and the probability parenthesis is the CH vs MM probability within this MM bucket.")
+
+
+
+
+# P7 Part D
+
+cat("\nP7 Part D\n")
+library(rpart)
+library(rpart.plot)
+OJ_tree_pD <- rpart(train$Purchase ~ ., data=train, method = "class")
+rpart.plot(OJ_tree_pD, main="Decision Tree for Citrus Hill vs Minute Maid")
+
+#other plotting option: 
+#plot(OJ_tree)
+#text(OJ_tree, pretty=0)
+
+# P7 Part E
+
+cat("\nP7 Part E\n")
+test.predict.7e <- predict(OJ_tree, test, type="class")
+table(test.predict.7e, test$Purchase)
+
+cat("\nPercent Incorrect Predictions for Part E:\n")
+cat((1-(150+71)/270)*100, "%")
+
+# P7 Part F
+
+cat("\nP7 Part F\n")
+cv.OJ.trainmodel <- cv.tree(OJ_tree, FUN = prune.misclass)
+names(cv.OJ.trainmodel)
+cv.OJ.trainmodel
+
+cat("\nBest model size according to CV output is a size of 4\n")
+
+# P7 Part G
+cat("\nP7 Part G\n")
+plot(cv.OJ.trainmodel$size, cv.OJ.trainmodel$dev, type="b", col="darkgreen")
+
+
+# P7 Part H
+
+cat("\nP7 Part H\n")
+cat("\nThe results from F and G appear to agree, model size of 4 is optimal\n")
+
+# P7 Part I
+cat("\nP7 Part I\n")
+
+OJ.trainmodel.pruned <- prune.misclass(OJ_tree, best = 4)
+
+# P7 Part J
+
+cat("\nP7 Part J\n")
+
+OJ.trainmodel.pruned.summary <- summary(OJ.trainmodel.pruned)
+OJ.trainmodel.pruned.summary
+
+cat("\nThe error in part J for the pruned tree is slightly higher than the error for the unpruned tree in part B (error rate of 0.17 vs 0.16 respectively)\n")
+
+# P7 Part K
+
+cat("\nP7 Part K\n")
+test.predict.7k <- predict(OJ.trainmodel.pruned, test, type="class")
+table(test.predict.7k, test$Purchase)
+
+#summary(test.predict.7k)
+
+cat("\nPercent Incorrect Predictions for Part K:\n")
+cat((1-(150+71)/270)*100, "%")
+cat("It would appear the model size of 4 (pruned) has a slightly higher test error rate compared to the unpruned model size.")
+
+
+
+
+```
+
+
